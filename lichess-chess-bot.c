@@ -65,24 +65,12 @@ size_t playGame(char *gameState, size_t size, size_t nmemb, void *gameId) {
 			myColor = !strcmp(JSONGetValueForKey("id", JSONGetValueForKey("white", json).json).str, myLichessId);
 		}
 
-		// int btime, wtime, binc, winc;
-
-		// if (gameFull) {
-		// 	btime = wtime = JSONGetValueForKey("initial", JSONGetValueForKey("clock", json).json).number;
-		// 	binc = winc = JSONGetValueForKey("increment", JSONGetValueForKey("clock", json).json).number;
-		// } else {
-		// 	btime = JSONGetValueForKey("btime", json).number;
-		// 	wtime = JSONGetValueForKey("wtime", json).number;
-		// 	binc = JSONGetValueForKey("binc", json).number;
-		// 	winc = JSONGetValueForKey("winc", json).number;
-		// }
-
 		if (!moves)
 			moves = " ";
 		else {
 			size_t strlenn = strlen(moves);
 			char beforaf = strlenn < 5 || moves[strlenn - 5] == ' ';
-			char *indicess = uciToIndices((char [6]) {moves[strlenn - (5 - beforaf)], moves[strlenn - 4 + beforaf], moves[strlenn - 3 + beforaf], moves[strlenn - 2 + beforaf], moves[strlenn - (!beforaf)], 0});
+			char *indicess = uciToIndices(board, (char [6]) {moves[strlenn - (5 - beforaf)], moves[strlenn - 4 + beforaf], moves[strlenn - 3 + beforaf], moves[strlenn - 2 + beforaf], moves[strlenn - (!beforaf)], 0});
 			memcpy(prevBoard, board, 32);
 			makeForcedMove(board, &brkrwr00, indicess);
 			printf("%s: Move from opp\n", (char [6]) {moves[strlenn - (5 - beforaf)], moves[strlenn - 4 + beforaf], moves[strlenn - 3 + beforaf], moves[strlenn - 2 + beforaf], moves[strlenn - (!beforaf)], 0});
@@ -93,31 +81,7 @@ size_t playGame(char *gameState, size_t size, size_t nmemb, void *gameId) {
 		printf("myc: %d, spaces: %d, sp%%2: %d\n", myColor, spaces(moves), spaces(moves) % 2);
 		fflush(stdout);
 		if (spaces(moves) % 2 == !!myColor) {
-			char *q; // = malloc(75 + intlen((int) btime) + intlen((int) wtime) + intlen((int) binc) + intlen((int) winc) + strlen(moves));
-			// sprintf(q, "printf \"position startpos move %s\\ngo btime %d wtime %d binc %d winc %d\\n\"|./engine", moves, btime, wtime, binc, winc);
-			// FILE *stockfish = popen(q, "r");
-			// printf("%s\n", q);
-			// free(q);
-			// char *ss = NULL;
-			// char c;
-			// while (1) {
-			// 	while ((c = fgetc(stockfish)) != '\n' && c != ' ') {
-			// 		appendToString(&ss, c);
-			// 	}
-			// 	if (!strcmp(ss, "bestmove")) {
-			// 		free(ss);
-			// 		break;
-			// 	} else {
-			// 		printf("%s\n", ss);
-			// 		free(ss);
-			// 		ss = NULL;
-			// 	}
-			// }
-			// char *bestmove = NULL;
-			// char ccc;
-			// while ((ccc = fgetc(stockfish)) != ' ' && ccc != '\n')
-			// 	appendToString(&bestmove, ccc);
-			// pclose(stockfish);
+			char *q;
 			char *valids = 0;
 			unsigned long _len_ = validMoves(board, prevBoard, brkrwr00, myColor, &valids);
 			if (!_len_) {
@@ -129,10 +93,7 @@ size_t playGame(char *gameState, size_t size, size_t nmemb, void *gameId) {
 			char indicess[3] = {valids[rnd * 3], valids[rnd * 3 + 1], valids[rnd * 3 + 2]};
 			char *bestmove = indicesToUci(indicess);
 			sprintf(q, "https://lichess.org/api/bot/game/%s/move/%s", (char *) gameId, bestmove);
-			// memcpy(prevBoard, board, 32);
-			// makeForcedMove(board, &brkrwr00, indicess);
-			// printf("After doing the best move (%s):\n", bestmove);
-			// printBoard(board);
+			printf("bestmove: %s\n", bestmove);
 			free(valids);
 			free(bestmove);
 
@@ -210,6 +171,8 @@ size_t callback(char *actualStr, size_t size, size_t nmemb, void *usrdata) {
 					curl_easy_setopt(curl, CURLOPT_POSTFIELDS, "");
 
 					setMyColor = 0;
+					free(board);
+					board = newChessBoard();
 					char *gameId = JSONGetValueForKey("id", JSONGetValueForKey("challenge", json).json).str;
 					char *s = malloc(42 + strlen(gameId));
 					sprintf(s, "https://lichess.org/api/challenge/%s/accept", gameId);
