@@ -1,2 +1,2 @@
 Bot:
-	gcc -o Bot lichess-chess-bot.c `curl-config --cflags --libs` && ./Bot
+	gcc -o Bot lichess-chess-bot.c `curl-config --cflags --libs`
