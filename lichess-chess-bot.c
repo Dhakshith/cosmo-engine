@@ -56,8 +56,10 @@ size_t playGame(char *gameState, size_t size, size_t nmemb, void *gameId) {
 		str = JSONGetValueForKey("type", json).str;
 		char gameFull = !strcmp(str, "gameFull");
 		char gameState = !strcmp(str, "gameState");
-		if (!gameFull && !gameState)
+		if (!gameFull && !gameState) {
+			freeJSON(json);
 			return nmemb;
+		}
 		char *moves = gameFull ? JSONGetValueForKey("moves", JSONGetValueForKey("state", json).json).str : JSONGetValueForKey("moves", json).str;
 		
 		if (!setMyColor && gameFull) {
@@ -73,29 +75,24 @@ size_t playGame(char *gameState, size_t size, size_t nmemb, void *gameId) {
 			char *indicess = uciToIndices(board, (char [6]) {moves[strlenn - (5 - beforaf)], moves[strlenn - 4 + beforaf], moves[strlenn - 3 + beforaf], moves[strlenn - 2 + beforaf], moves[strlenn - (!beforaf)], 0});
 			memcpy(prevBoard, board, 32);
 			makeForcedMove(board, &brkrwr00, indicess);
-			printf("%s: Move from opp\n", (char [6]) {moves[strlenn - (5 - beforaf)], moves[strlenn - 4 + beforaf], moves[strlenn - 3 + beforaf], moves[strlenn - 2 + beforaf], moves[strlenn - (!beforaf)], 0});
-			printBoard(board);
 			free(indicess);
 		}
 
-		printf("myc: %d, spaces: %d, sp%%2: %d\n", myColor, spaces(moves), spaces(moves) % 2);
-		fflush(stdout);
+		freeJSON(json);
+
 		if (spaces(moves) % 2 == !!myColor) {
 			char *q;
-			char *valids = 0;
-			unsigned long _len_ = validMoves(board, prevBoard, brkrwr00, myColor, &valids);
-			if (!_len_) {
-				printf("Checkmate\n");
+			char *indicess = theBestMove(board, prevBoard, brkrwr00, myColor);
+			
+			if (!indicess)
 				return nmemb;
-			}
+			
 			q = malloc(45 + strlen((char *) gameId));
-			int rnd = ((float) rand()) / RAND_MAX * (_len_ / 3 - 1);
-			char indicess[3] = {valids[rnd * 3], valids[rnd * 3 + 1], valids[rnd * 3 + 2]};
+
 			char *bestmove = indicesToUci(indicess);
 			sprintf(q, "https://lichess.org/api/bot/game/%s/move/%s", (char *) gameId, bestmove);
-			printf("bestmove: %s\n", bestmove);
-			free(valids);
 			free(bestmove);
+			free(indicess);
 
 			CURL *curl = curl_easy_init();
 			CURLcode res;
@@ -185,7 +182,7 @@ size_t callback(char *actualStr, size_t size, size_t nmemb, void *usrdata) {
 					char *gameId = JSONGetValueForKey("id", JSONGetValueForKey("game", json).json).str;
 
 					curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, playGame);
-					curl_easy_setopt(curl, CURLOPT_WRITEDATA, gameId);
+					curl_easy_setopt(curl, CURLOPT_WRITEDATA, strcpy(malloc(strlen(gameId) + 1), gameId));
 
 					char *s = malloc(41 + strlen(gameId));
 					sprintf(s, "https://lichess.org/api/bot/game/stream/%s", gameId);

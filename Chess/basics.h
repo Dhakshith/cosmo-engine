@@ -40,6 +40,7 @@ static inline unsigned char notationToBlackPiece(char);
 void printBoard(uint64_t const *);
 void printValidMoves(uint64_t const *, uint64_t const *, char, char);
 unsigned long validMoves(uint64_t const *, uint64_t const *, char, char, char **);
+char *theBestMove(uint64_t const *, uint64_t const *, char, char);
 static inline char *uciToIndices(uint64_t *, char const *);
 static inline char *indicesToUci(char const *);
 static inline char isBlack(unsigned char);
@@ -259,6 +260,16 @@ unsigned long validMoves(uint64_t const *board, uint64_t const *prevBoard, char 
 		}
 
 	return _len;
+}
+
+char *theBestMove(uint64_t const *board, uint64_t const *prevBoard, char brkrwrkr00, char isWhiteYourColor) {
+	char *valids = NULL;
+	unsigned long _len_ = validMoves(board, prevBoard, brkrwrkr00, isWhiteYourColor, &valids);
+	if (!_len_)
+		return NULL;
+	char *ret = memcpy(malloc(3), valids + (unsigned long) ((float) rand()) / RAND_MAX * (_len_ / 3 - 1) * 3, 3);
+	free(valids);
+	return ret;
 }
 
 void printValidMoves(uint64_t const *board, uint64_t const *prevBoard, char brkrwrkr00, char isWhiteYourColor) {
