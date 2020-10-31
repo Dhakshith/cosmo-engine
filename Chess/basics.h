@@ -35,10 +35,12 @@ static inline void makeForcedMove(uint64_t *, char *, char const *); // make mov
 char validateMove(uint64_t const *, uint64_t const *, char, char const *);
 static inline char pieceToNotation(unsigned char);
 static inline unsigned char notationToPiece(char);
+static inline unsigned char notationToWhitePiece(char);
+static inline unsigned char notationToBlackPiece(char);
 void printBoard(uint64_t const *);
 void printValidMoves(uint64_t const *, uint64_t const *, char, char);
 unsigned long validMoves(uint64_t const *, uint64_t const *, char, char, char **);
-static inline char *uciToIndices(char const *);
+static inline char *uciToIndices(uint64_t *, char const *);
 static inline char *indicesToUci(char const *);
 static inline char isBlack(unsigned char);
 static inline char isWhite(unsigned char);
@@ -387,6 +389,14 @@ static inline unsigned char notationToPiece(char p) {
 	return p == ' ' ? BLANK : p == 'P' ? PAWN_W : p == 'p' ? PAWN_B : p == 'N' ? KNIGHT_W : p == 'n' ? KNIGHT_B : p == 'B' ? BISHOP_W : p == 'b' ? BISHOP_B : p == 'R' ? ROOK_W : p == 'r' ? ROOK_B : p == 'Q' ? QUEEN_W : p == 'q' ? QUEEN_B : p == 'K' ? KING_W : p == 'k' ? KING_B : UNKNOWN;
 }
 
+static inline unsigned char notationToWhitePiece(char p) {
+	return p == ' ' ? BLANK : (p == 'P' || p == 'p') ? PAWN_W : (p == 'N' || p == 'n') ? KNIGHT_W : (p == 'B' || p == 'b') ? BISHOP_W : (p == 'R' || p == 'r') ? ROOK_W : (p == 'Q' || p == 'q') ? QUEEN_W : (p == 'K' || p == 'k') ? KING_W : UNKNOWN;
+}
+
+static inline unsigned char notationToBlackPiece(char p) {
+	return p == ' ' ? BLANK : (p == 'P' || p == 'p') ? PAWN_B : (p == 'N' || p == 'n') ? KNIGHT_B : (p == 'B' || p == 'b') ? BISHOP_B : (p == 'R' || p == 'r') ? ROOK_B : (p == 'Q' || p == 'q') ? QUEEN_B : (p == 'K' || p == 'k') ? KING_B : UNKNOWN;
+}
+
 static inline void makeForcedMove(uint64_t *board, char *brkrwrkr00, char const *args) {
 	char toPiece = accessBoardAt(board, args[1]);
 	char fromPiece = accessBoardAt(board, args[0]);
@@ -483,11 +493,11 @@ static inline unsigned char chessPosToIndex(char const *p) {
 	return (p[0] - 'a' + 1) + (8 - p[1] + '0') * 8 - 1;
 }
 
-static inline char *uciToIndices(char const *uci) {
+static inline char *uciToIndices(uint64_t *board, char const *uci) {
 	char *ret = malloc(3);
 	ret[0] = chessPosToIndex((char [2]) {uci[0], uci[1]});
 	ret[1] = chessPosToIndex((char [2]) {uci[2], uci[3]});
-	ret[2] = uci[4] ? notationToPiece(uci[4]) : 0;
+	ret[2] = uci[4] ? (isWhite(accessBoardAt(board, ret[0])) ? notationToWhitePiece(uci[4]) : notationToBlackPiece(uci[4])) : 0;
 	return ret;
 }
 
