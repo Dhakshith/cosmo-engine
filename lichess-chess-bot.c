@@ -1,14 +1,3 @@
-// heroku ps:scale service=1 -a lichess-chess-bot
-
-
-
-
-
-
-
-
-
-
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
