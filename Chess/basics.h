@@ -31,10 +31,11 @@ uint64_t *newChessBoard();
 static inline unsigned char accessBoardAt(uint64_t const *, unsigned char);
 static inline void setBoardAt(uint64_t *, unsigned char, unsigned char);
 static inline void makeMove(uint64_t *, uint64_t const *, char *, char *); // char * (3nd arg) -> {from, to, promotionPiece or 0}
-static inline void makeForcedMove(uint64_t *, char *, char const *); // make move without validating
+void makeForcedMove(uint64_t *, char *, char const *); // make move without validating
 char validateMove(uint64_t const *, uint64_t const *, char, char const *);
 static inline char pieceToNotation(unsigned char);
 static inline unsigned char notationToPiece(char);
+static inline char pieceToLowerNotation(unsigned char);
 static inline unsigned char notationToWhitePiece(char);
 static inline unsigned char notationToBlackPiece(char);
 void printBoard(uint64_t const *);
@@ -225,39 +226,561 @@ char validateMove(uint64_t const *board, uint64_t const *prevBoard, char brkrwrk
 	return valid;
 }
 
-unsigned long validMoves(uint64_t const *board, uint64_t const *prevBoard, char brkrwrkr00, char isWhiteYourColor, char **retAddr) {
-	if (!isWhiteYourColor)
-		isWhiteYourColor = -1;
-	else
-		isWhiteYourColor = 1;
+unsigned long validMoves(uint64_t const *boardcpy, uint64_t const *prevBoard, char brkrwrkr00, char isWhiteYourColor, char **retAddr) {
+	uint64_t *board = memcpy(malloc(4 * sizeof *boardcpy), boardcpy, 32);
+	char (*isMyC)(unsigned char) = isWhiteYourColor ? isWhite : isBlack;
 
 	*retAddr = 0;
 	unsigned long _len = 0;
-	
-	for (char i = 0; i < 64; i++)
-		for (char j = 0; j < 64; j++) {
-			char piese = accessBoardAt(board, i);
-			char colorOfPiece = isWhite(piese) ? 1 : isBlack(piese) ? -1 : 0;
 
-			if (!piese || isWhiteYourColor != colorOfPiece)
-				break;
-			
-			#define PRINTIFVALID() ({if (validateMove(board,prevBoard,brkrwrkr00,mv)){*retAddr=realloc(*retAddr, _len += 3);(*retAddr)[_len-3]=mv[0];(*retAddr)[_len-2]=mv[1];(*retAddr)[_len-1]=mv[2];}})
-			char mv[3] = {i, j, 0};
-			PRINTIFVALID();
-			mv[2] = QUEEN_W;
-			PRINTIFVALID();
-			mv[2] = QUEEN_B;
-			PRINTIFVALID();
-			mv[2] = KNIGHT_W;
-			PRINTIFVALID();
-			mv[2] = KNIGHT_B;
-			PRINTIFVALID();
-			mv[2] = BISHOP_W;
-			PRINTIFVALID();
-			mv[2] = BISHOP_B;
-			PRINTIFVALID();
+	for (char i = 0; i < 64; i++) {
+		printf(i == 63 ? "%d" : "%d ", i);
+		fflush(stdout);
+
+		char acbabi = accessBoardAt(board, i);
+
+		if (!isMyC(acbabi))
+			continue;
+
+		switch (acbabi) {
+			case PAWN_W: {
+				char acbabim8ib = accessBoardAt(board, i - 8) == BLANK;
+				char x = i % 8;
+				char y = i / 8;
+				if (acbabim8ib && y != 1) {
+					*retAddr = realloc(*retAddr, _len += 3);
+					(*retAddr)[_len - 3] = i;
+					(*retAddr)[_len - 2] = i - 8;
+					(*retAddr)[_len - 1] = 0;
+				}
+
+				if (y == 6 && acbabim8ib && accessBoardAt(board, i - 16) == BLANK) {
+					*retAddr = realloc(*retAddr, _len += 3);
+					(*retAddr)[_len - 3] = i;
+					(*retAddr)[_len - 2] = i - 16;
+					(*retAddr)[_len - 1] = 0;
+				}
+
+				char im7 = accessBoardAt(board, i - 7);
+				char im7ib = isBlack(im7);
+
+				if (x <= 6 && ((y == 3 && accessBoardAt(board, i + 1) == PAWN_B && im7 == BLANK && accessBoardAt(prevBoard, i + 1) == BLANK) || (im7ib && y != 1))) {
+					*retAddr = realloc(*retAddr, _len += 3);
+					(*retAddr)[_len - 3] = i;
+					(*retAddr)[_len - 2] = i - 7;
+					(*retAddr)[_len - 1] = 0;
+				}
+				
+				char im9 = accessBoardAt(board, i - 9);
+				char im9ib = isBlack(im9);
+
+				if (x >= 1 && ((y == 3 && accessBoardAt(board, i - 1) == PAWN_B && im9 == BLANK && accessBoardAt(prevBoard, i - 1) == BLANK) || (im9ib && y != 1))) {
+					*retAddr = realloc(*retAddr, _len += 3);
+					(*retAddr)[_len - 3] = i;
+					(*retAddr)[_len - 2] = i - 9;
+					(*retAddr)[_len - 1] = 0;
+				}
+
+				if (y == 1 && acbabim8ib) {
+					*retAddr = realloc(*retAddr, _len += 12);
+					(*retAddr)[_len - 1] = KNIGHT_W;
+					(*retAddr)[_len - 2] = i - 8;
+					(*retAddr)[_len - 3] = i;
+					(*retAddr)[_len - 4] = BISHOP_W;
+					(*retAddr)[_len - 5] = i - 8;
+					(*retAddr)[_len - 6] = i;
+					(*retAddr)[_len - 7] = ROOK_W;
+					(*retAddr)[_len - 8] = i - 8;
+					(*retAddr)[_len - 9] = i;
+					(*retAddr)[_len - 10] = QUEEN_W;
+					(*retAddr)[_len - 11] = i - 8;
+					(*retAddr)[_len - 12] = i;
+				}
+
+				if (y == 1 && im9ib) {
+					*retAddr = realloc(*retAddr, _len += 12);
+					(*retAddr)[_len - 1] = KNIGHT_W;
+					(*retAddr)[_len - 2] = i - 9;
+					(*retAddr)[_len - 3] = i;
+					(*retAddr)[_len - 4] = BISHOP_W;
+					(*retAddr)[_len - 5] = i - 9;
+					(*retAddr)[_len - 6] = i;
+					(*retAddr)[_len - 7] = ROOK_W;
+					(*retAddr)[_len - 8] = i - 9;
+					(*retAddr)[_len - 9] = i;
+					(*retAddr)[_len - 10] = QUEEN_W;
+					(*retAddr)[_len - 11] = i - 9;
+					(*retAddr)[_len - 12] = i;
+				}
+
+				if (y == 1 && im7ib) {
+					*retAddr = realloc(*retAddr, _len += 12);
+					(*retAddr)[_len - 1] = KNIGHT_W;
+					(*retAddr)[_len - 2] = i - 7;
+					(*retAddr)[_len - 3] = i;
+					(*retAddr)[_len - 4] = BISHOP_W;
+					(*retAddr)[_len - 5] = i - 7;
+					(*retAddr)[_len - 6] = i;
+					(*retAddr)[_len - 7] = ROOK_W;
+					(*retAddr)[_len - 8] = i - 7;
+					(*retAddr)[_len - 9] = i;
+					(*retAddr)[_len - 10] = QUEEN_W;
+					(*retAddr)[_len - 11] = i - 7;
+					(*retAddr)[_len - 12] = i;
+				}
+			} break;
+			case PAWN_B: {
+				char acbabip8ib = accessBoardAt(board, i + 8) == BLANK;
+				char x = i % 8;
+				char y = i / 8;
+				if (acbabip8ib && y != 6) {
+					*retAddr = realloc(*retAddr, _len += 3);
+					(*retAddr)[_len - 3] = i;
+					(*retAddr)[_len - 2] = i + 8;
+					(*retAddr)[_len - 1] = 0;
+				}
+
+				if (y == 1 && acbabip8ib && accessBoardAt(board, i + 16) == BLANK) {
+					*retAddr = realloc(*retAddr, _len += 3);
+					(*retAddr)[_len - 3] = i;
+					(*retAddr)[_len - 2] = i + 16;
+					(*retAddr)[_len - 1] = 0;
+				}
+
+				char ip7 = accessBoardAt(board, i + 9);
+				char ip7ib = isWhite(ip7);
+
+				if (x <= 6 && ((y == 4 && accessBoardAt(board, i + 1) == PAWN_W && ip7 == BLANK && accessBoardAt(prevBoard, i + 1) == BLANK) || (ip7ib && y != 6))) {
+					*retAddr = realloc(*retAddr, _len += 3);
+					(*retAddr)[_len - 3] = i;
+					(*retAddr)[_len - 2] = i + 9;
+					(*retAddr)[_len - 1] = 0;
+				}
+				
+				char ip9 = accessBoardAt(board, i + 7);
+				char ip9ib = isWhite(ip9);
+
+				if (x >= 1 && ((y == 4 && accessBoardAt(board, i - 1) == PAWN_W && ip9 == BLANK && accessBoardAt(prevBoard, i - 1) == BLANK) || (ip9ib && y != 6))) {
+					*retAddr = realloc(*retAddr, _len += 3);
+					(*retAddr)[_len - 3] = i;
+					(*retAddr)[_len - 2] = i + 7;
+					(*retAddr)[_len - 1] = 0;
+				}
+
+				if (y == 6 && acbabip8ib) {
+					*retAddr = realloc(*retAddr, _len += 12);
+					(*retAddr)[_len - 1] = KNIGHT_B;
+					(*retAddr)[_len - 2] = i + 8;
+					(*retAddr)[_len - 3] = i;
+					(*retAddr)[_len - 4] = BISHOP_B;
+					(*retAddr)[_len - 5] = i + 8;
+					(*retAddr)[_len - 6] = i;
+					(*retAddr)[_len - 7] = ROOK_B;
+					(*retAddr)[_len - 8] = i + 8;
+					(*retAddr)[_len - 9] = i;
+					(*retAddr)[_len - 10] = QUEEN_B;
+					(*retAddr)[_len - 11] = i + 8;
+					(*retAddr)[_len - 12] = i;
+				}
+
+				if (y == 6 && ip9ib) {
+					*retAddr = realloc(*retAddr, _len += 12);
+					(*retAddr)[_len - 1] = KNIGHT_B;
+					(*retAddr)[_len - 2] = i + 7;
+					(*retAddr)[_len - 3] = i;
+					(*retAddr)[_len - 4] = BISHOP_B;
+					(*retAddr)[_len - 5] = i + 7;
+					(*retAddr)[_len - 6] = i;
+					(*retAddr)[_len - 7] = ROOK_B;
+					(*retAddr)[_len - 8] = i + 7;
+					(*retAddr)[_len - 9] = i;
+					(*retAddr)[_len - 10] = QUEEN_B;
+					(*retAddr)[_len - 11] = i + 7;
+					(*retAddr)[_len - 12] = i;
+				}
+
+				if (y == 6 && ip7ib) {
+					*retAddr = realloc(*retAddr, _len += 12);
+					(*retAddr)[_len - 1] = KNIGHT_B;
+					(*retAddr)[_len - 2] = i + 9;
+					(*retAddr)[_len - 3] = i;
+					(*retAddr)[_len - 4] = BISHOP_B;
+					(*retAddr)[_len - 5] = i + 9;
+					(*retAddr)[_len - 6] = i;
+					(*retAddr)[_len - 7] = ROOK_B;
+					(*retAddr)[_len - 8] = i + 9;
+					(*retAddr)[_len - 9] = i;
+					(*retAddr)[_len - 10] = QUEEN_B;
+					(*retAddr)[_len - 11] = i + 9;
+					(*retAddr)[_len - 12] = i;
+				}
+			} break;
+			case KNIGHT_W: case KNIGHT_B: {
+				char x = i % 8, y = i / 8;
+
+				if (x < 6 && y < 7 && !isMyC(accessBoardAt(board, i + 10))) {
+					*retAddr = realloc(*retAddr, _len += 3);
+					(*retAddr)[_len - 3] = i;
+					(*retAddr)[_len - 2] = i + 10;
+					(*retAddr)[_len - 1] = 0;
+				}
+
+				if (x < 6 && y > 0 && !isMyC(accessBoardAt(board, i - 6))) {
+					*retAddr = realloc(*retAddr, _len += 3);
+					(*retAddr)[_len - 3] = i;
+					(*retAddr)[_len - 2] = i - 6;
+					(*retAddr)[_len - 1] = 0;
+				}
+
+				if (x > 1 && y > 0 && !isMyC(accessBoardAt(board, i - 10))) {
+					*retAddr = realloc(*retAddr, _len += 3);
+					(*retAddr)[_len - 3] = i;
+					(*retAddr)[_len - 2] = i - 10;
+					(*retAddr)[_len - 1] = 0;
+				}
+
+				if (x > 1 && y < 7 && !isMyC(accessBoardAt(board, i + 6))) {
+					*retAddr = realloc(*retAddr, _len += 3);
+					(*retAddr)[_len - 3] = i;
+					(*retAddr)[_len - 2] = i + 6;
+					(*retAddr)[_len - 1] = 0;
+				}
+
+				if (x < 7 && y < 6 && !isMyC(accessBoardAt(board, i + 17))) {
+					*retAddr = realloc(*retAddr, _len += 3);
+					(*retAddr)[_len - 3] = i;
+					(*retAddr)[_len - 2] = i + 17;
+					(*retAddr)[_len - 1] = 0;
+				}
+
+				if (x < 7 && y > 1 && !isMyC(accessBoardAt(board, i - 15))) {
+					*retAddr = realloc(*retAddr, _len += 3);
+					(*retAddr)[_len - 3] = i;
+					(*retAddr)[_len - 2] = i - 15;
+					(*retAddr)[_len - 1] = 0;
+				}
+
+				if (x > 0 && y > 1 && !isMyC(accessBoardAt(board, i - 17))) {
+					*retAddr = realloc(*retAddr, _len += 3);
+					(*retAddr)[_len - 3] = i;
+					(*retAddr)[_len - 2] = i - 17;
+					(*retAddr)[_len - 1] = 0;
+				}
+
+				if (x > 0 && y < 6 && !isMyC(accessBoardAt(board, i + 15))) {
+					*retAddr = realloc(*retAddr, _len += 3);
+					(*retAddr)[_len - 3] = i;
+					(*retAddr)[_len - 2] = i + 15;
+					(*retAddr)[_len - 1] = 0;
+				}
+			} break;
+			case BISHOP_W: case BISHOP_B: {
+				char x = i % 8, y = i / 8;
+
+				for (char x2 = x + 1, y2 = y + 1; x2 < 8 && y2 < 8; x2++, y2++) {
+					char acbabx2y2 = accessBoardAt(board, x2 + y2 * 8);
+					if (!isMyC(acbabx2y2)) {
+						*retAddr = realloc(*retAddr, _len += 3);
+						(*retAddr)[_len - 3] = i;
+						(*retAddr)[_len - 2] = x2 + y2 * 8;
+						(*retAddr)[_len - 1] = 0;
+					}
+
+					if (acbabx2y2 != BLANK)
+						break;
+				}
+
+				for (char x2 = x - 1, y2 = y + 1; x2 >= 0 && y2 < 8; x2--, y2++) {
+					char acbabx2y2 = accessBoardAt(board, x2 + y2 * 8);
+					if (!isMyC(acbabx2y2)) {
+						*retAddr = realloc(*retAddr, _len += 3);
+						(*retAddr)[_len - 3] = i;
+						(*retAddr)[_len - 2] = x2 + y2 * 8;
+						(*retAddr)[_len - 1] = 0;
+					}
+
+					if (acbabx2y2 != BLANK)
+						break;
+				}
+
+				for (char x2 = x + 1, y2 = y - 1; x2 < 8 && y2 >= 0; x2++, y2--) {
+					char acbabx2y2 = accessBoardAt(board, x2 + y2 * 8);
+					if (!isMyC(acbabx2y2)) {
+						*retAddr = realloc(*retAddr, _len += 3);
+						(*retAddr)[_len - 3] = i;
+						(*retAddr)[_len - 2] = x2 + y2 * 8;
+						(*retAddr)[_len - 1] = 0;
+					}
+
+					if (acbabx2y2 != BLANK)
+						break;
+				}
+
+				for (char x2 = x - 1, y2 = y - 1; x2 >= 0 && y2 >= 0; x2--, y2--) {
+					char acbabx2y2 = accessBoardAt(board, x2 + y2 * 8);
+					if (!isMyC(acbabx2y2)) {
+						*retAddr = realloc(*retAddr, _len += 3);
+						(*retAddr)[_len - 3] = i;
+						(*retAddr)[_len - 2] = x2 + y2 * 8;
+						(*retAddr)[_len - 1] = 0;
+					}
+
+					if (acbabx2y2 != BLANK)
+						break;
+				}
+			} break;
+			case ROOK_W: case ROOK_B: {
+				char x = i % 8, y = i / 8;
+
+				for (char x2 = x + 1; x2 < 8; x2++) {
+					char acbabx2y2 = accessBoardAt(board, x2 + y * 8);
+					if (!isMyC(acbabx2y2)) {
+						*retAddr = realloc(*retAddr, _len += 3);
+						(*retAddr)[_len - 3] = i;
+						(*retAddr)[_len - 2] = x2 + y * 8;
+						(*retAddr)[_len - 1] = 0;
+					}
+
+					if (acbabx2y2 != BLANK)
+						break;
+				}
+
+				for (char x2 = x - 1; x2 >= 0; x2--) {
+					char acbabx2y2 = accessBoardAt(board, x2 + y * 8);
+					if (!isMyC(acbabx2y2)) {
+						*retAddr = realloc(*retAddr, _len += 3);
+						(*retAddr)[_len - 3] = i;
+						(*retAddr)[_len - 2] = x2 + y * 8;
+						(*retAddr)[_len - 1] = 0;
+					}
+
+					if (acbabx2y2 != BLANK)
+						break;
+				}
+
+				for (char y2 = y + 1; y2 < 8; y2++) {
+					char acbabx2y2 = accessBoardAt(board, x + y2 * 8);
+					if (!isMyC(acbabx2y2)) {
+						*retAddr = realloc(*retAddr, _len += 3);
+						(*retAddr)[_len - 3] = i;
+						(*retAddr)[_len - 2] = x + y2 * 8;
+						(*retAddr)[_len - 1] = 0;
+					}
+
+					if (acbabx2y2 != BLANK)
+						break;
+				}
+
+				for (char y2 = y - 1; y2 >= 0; y2--) {
+					char acbabx2y2 = accessBoardAt(board, x + y2 * 8);
+					if (!isMyC(acbabx2y2)) {
+						*retAddr = realloc(*retAddr, _len += 3);
+						(*retAddr)[_len - 3] = i;
+						(*retAddr)[_len - 2] = x + y2 * 8;
+						(*retAddr)[_len - 1] = 0;
+					}
+
+					if (acbabx2y2 != BLANK)
+						break;
+				}
+			} break;
+			case QUEEN_W: case QUEEN_B: {
+				char x = i % 8, y = i / 8;
+
+				for (char x2 = x + 1; x2 < 8; x2++) {
+					char acbabx2y2 = accessBoardAt(board, x2 + y * 8);
+					if (!isMyC(acbabx2y2)) {
+						*retAddr = realloc(*retAddr, _len += 3);
+						(*retAddr)[_len - 3] = i;
+						(*retAddr)[_len - 2] = x2 + y * 8;
+						(*retAddr)[_len - 1] = 0;
+					}
+
+					if (acbabx2y2 != BLANK)
+						break;
+				}
+
+				for (char x2 = x - 1; x2 >= 0; x2--) {
+					char acbabx2y2 = accessBoardAt(board, x2 + y * 8);
+					if (!isMyC(acbabx2y2)) {
+						*retAddr = realloc(*retAddr, _len += 3);
+						(*retAddr)[_len - 3] = i;
+						(*retAddr)[_len - 2] = x2 + y * 8;
+						(*retAddr)[_len - 1] = 0;
+					}
+
+					if (acbabx2y2 != BLANK)
+						break;
+				}
+
+				for (char y2 = y + 1; y2 < 8; y2++) {
+					char acbabx2y2 = accessBoardAt(board, x + y2 * 8);
+					if (!isMyC(acbabx2y2)) {
+						*retAddr = realloc(*retAddr, _len += 3);
+						(*retAddr)[_len - 3] = i;
+						(*retAddr)[_len - 2] = x + y2 * 8;
+						(*retAddr)[_len - 1] = 0;
+					}
+
+					if (acbabx2y2 != BLANK)
+						break;
+				}
+
+				for (char y2 = y - 1; y2 >= 0; y2--) {
+					char acbabx2y2 = accessBoardAt(board, x + y2 * 8);
+					if (!isMyC(acbabx2y2)) {
+						*retAddr = realloc(*retAddr, _len += 3);
+						(*retAddr)[_len - 3] = i;
+						(*retAddr)[_len - 2] = x + y2 * 8;
+						(*retAddr)[_len - 1] = 0;
+					}
+
+					if (acbabx2y2 != BLANK)
+						break;
+				}
+
+				for (char x2 = x + 1, y2 = y + 1; x2 < 8 && y2 < 8; x2++, y2++) {
+					char acbabx2y2 = accessBoardAt(board, x2 + y2 * 8);
+					if (!isMyC(acbabx2y2)) {
+						*retAddr = realloc(*retAddr, _len += 3);
+						(*retAddr)[_len - 3] = i;
+						(*retAddr)[_len - 2] = x2 + y2 * 8;
+						(*retAddr)[_len - 1] = 0;
+					}
+
+					if (acbabx2y2 != BLANK)
+						break;
+				}
+
+				for (char x2 = x - 1, y2 = y + 1; x2 >= 0 && y2 < 8; x2--, y2++) {
+					char acbabx2y2 = accessBoardAt(board, x2 + y2 * 8);
+					if (!isMyC(acbabx2y2)) {
+						*retAddr = realloc(*retAddr, _len += 3);
+						(*retAddr)[_len - 3] = i;
+						(*retAddr)[_len - 2] = x2 + y2 * 8;
+						(*retAddr)[_len - 1] = 0;
+					}
+
+					if (acbabx2y2 != BLANK)
+						break;
+				}
+
+				for (char x2 = x + 1, y2 = y - 1; x2 < 8 && y2 >= 0; x2++, y2--) {
+					char acbabx2y2 = accessBoardAt(board, x2 + y2 * 8);
+					if (!isMyC(acbabx2y2)) {
+						*retAddr = realloc(*retAddr, _len += 3);
+						(*retAddr)[_len - 3] = i;
+						(*retAddr)[_len - 2] = x2 + y2 * 8;
+						(*retAddr)[_len - 1] = 0;
+					}
+
+					if (acbabx2y2 != BLANK)
+						break;
+				}
+
+				for (char x2 = x - 1, y2 = y - 1; x2 >= 0 && y2 >= 0; x2--, y2--) {
+					char acbabx2y2 = accessBoardAt(board, x2 + y2 * 8);
+					if (!isMyC(acbabx2y2)) {
+						*retAddr = realloc(*retAddr, _len += 3);
+						(*retAddr)[_len - 3] = i;
+						(*retAddr)[_len - 2] = x2 + y2 * 8;
+						(*retAddr)[_len - 1] = 0;
+					}
+
+					if (acbabx2y2 != BLANK)
+						break;
+				}
+			} break;
+			case KING_W: case KING_B: {
+				char x = i % 8, y = i / 8;
+
+				setBoardAt(board, i, BLANK);
+
+				if (x > 0 && !isMyC(accessBoardAt(board, i - 1))) {
+					*retAddr = realloc(*retAddr, _len += 3);
+					(*retAddr)[_len - 3] = i;
+					(*retAddr)[_len - 2] = i - 1;
+					(*retAddr)[_len - 1] = 0;
+				}
+
+				if (x < 7 && !isMyC(accessBoardAt(board, i + 1))) {
+					*retAddr = realloc(*retAddr, _len += 3);
+					(*retAddr)[_len - 3] = i;
+					(*retAddr)[_len - 2] = i + 1;
+					(*retAddr)[_len - 1] = 0;
+				}
+
+				if (y > 0 && !isMyC(accessBoardAt(board, i - 8))) {
+					*retAddr = realloc(*retAddr, _len += 3);
+					(*retAddr)[_len - 3] = i;
+					(*retAddr)[_len - 2] = i - 8;
+					(*retAddr)[_len - 1] = 0;
+				}
+
+				if (y < 7 && !isMyC(accessBoardAt(board, i + 8))) {
+					*retAddr = realloc(*retAddr, _len += 3);
+					(*retAddr)[_len - 3] = i;
+					(*retAddr)[_len - 2] = i + 8;
+					(*retAddr)[_len - 1] = 0;
+				}
+
+				if (y > 0 && x > 0 && !isMyC(accessBoardAt(board, i - 9))) {
+					*retAddr = realloc(*retAddr, _len += 3);
+					(*retAddr)[_len - 3] = i;
+					(*retAddr)[_len - 2] = i - 9;
+					(*retAddr)[_len - 1] = 0;
+				}
+
+				if (y > 0 && x < 7 && !isMyC(accessBoardAt(board, i - 7))) {
+					*retAddr = realloc(*retAddr, _len += 3);
+					(*retAddr)[_len - 3] = i;
+					(*retAddr)[_len - 2] = i - 7;
+					(*retAddr)[_len - 1] = 0;
+				}
+
+				if (y < 7 && x > 0 && !isMyC(accessBoardAt(board, i + 7))) {
+					*retAddr = realloc(*retAddr, _len += 3);
+					(*retAddr)[_len - 3] = i;
+					(*retAddr)[_len - 2] = i + 7;
+					(*retAddr)[_len - 1] = 0;
+				}
+
+				if (y < 7 && x < 7 && !isMyC(accessBoardAt(board, i + 9))) {
+					*retAddr = realloc(*retAddr, _len += 3);
+					(*retAddr)[_len - 3] = i;
+					(*retAddr)[_len - 2] = i + 9;
+					(*retAddr)[_len - 1] = 0;
+				}
+
+				// implement castling
+
+				setBoardAt(board, i, acbabi /* KING_W or KING_B */ );
+			} break;
 		}
+	}
+
+	printf("\nDone calculating the valid moves\n");
+	fflush(stdout);
+
+	if (_len) {
+		uint64_t *bbboard = memcpy(malloc(4 * sizeof *board), board, 32);
+		for (long i = _len - 3; i >= 0; i -= 3) {
+			char brkrwrkr00cpy = brkrwrkr00;
+			makeForcedMove(board, &brkrwrkr00cpy, (char [3]) {(*retAddr)[i], (*retAddr)[i + 1], (*retAddr)[i + 2]});
+			if (isCheckOnKing(board, isWhiteYourColor)) {
+				char *ucii = indicesToUci((char [3]) {(*retAddr)[i], (*retAddr)[i + 1], (*retAddr)[i + 2]});
+				printf("Rejecting: %s\n", ucii);
+				fflush(stdout);
+				free(ucii);
+				if ((unsigned long) (i + 3) != _len) memmove((*retAddr) + i, (*retAddr) + i + 3, _len - i - 3);
+				*retAddr = realloc((*retAddr), _len -= 3);
+			}
+			memcpy(board, bbboard, 32);
+		}
+		free(bbboard);
+	}
+
+	free(board);
 
 	return _len;
 }
@@ -267,19 +790,24 @@ char *theBestMove(uint64_t const *board, uint64_t const *prevBoard, char brkrwrk
 	unsigned long _len_ = validMoves(board, prevBoard, brkrwrkr00, isWhiteYourColor, &valids);
 	if (!_len_)
 		return NULL;
-	char *ret = memcpy(malloc(3), valids + (unsigned long) ((float) rand()) / RAND_MAX * (_len_ / 3 - 1) * 3, 3);
+	char *ret = memcpy(malloc(3), valids + (unsigned long) (((float) rand()) / RAND_MAX * (_len_ / 3 - 1)) * 3, 3);
 	free(valids);
+	printValidMoves(board, prevBoard, brkrwrkr00, isWhiteYourColor);
 	return ret;
 }
 
 void printValidMoves(uint64_t const *board, uint64_t const *prevBoard, char brkrwrkr00, char isWhiteYourColor) {
 	char *ret = 0;
 	unsigned long len = validMoves(board, prevBoard, brkrwrkr00, isWhiteYourColor, &ret);
+	
 	for (unsigned long i = 0; i < len; i += 3) {
 		char *strr = indicesToUci((char [3]) {ret[i], ret[i + 1], ret[i + 2]});
-		printf("%s\n", strr);
+		printf((i + 3 == len) ? "%s" : "%s ", strr);
+		fflush(stdout);
 		free(strr);
 	}
+
+	printf("\n");
 	free(ret);
 	fflush(stdout);
 }
@@ -298,6 +826,7 @@ char isCheckOnKing(uint64_t const *board, char kingColor) {
 
 	if (kingX == -1 || kingY == -1) {
 		printf("No King on Board!\n");
+		fflush(stdout);
 		return 0;
 	}
 
@@ -396,6 +925,10 @@ static inline char pieceToNotation(unsigned char p) {
 	return p == BLANK ? ' ' : p == PAWN_W ? 'P' : p == PAWN_B ? 'p' : p == KNIGHT_W ? 'N' : p == KNIGHT_B ? 'n' : p == BISHOP_W ? 'B' : p == BISHOP_B ? 'b' : p == ROOK_W ? 'R' : p == ROOK_B ? 'r' : p == QUEEN_W ? 'Q' : p == QUEEN_B ? 'q' : p == KING_W ? 'K' : p == KING_B ? 'k' : 'U';
 }
 
+static inline char pieceToLowerNotation(unsigned char p) {
+	return p == BLANK ? ' ' : p == PAWN_W ? 'p' : p == PAWN_B ? 'p' : p == KNIGHT_W ? 'n' : p == KNIGHT_B ? 'n' : p == BISHOP_W ? 'b' : p == BISHOP_B ? 'b' : p == ROOK_W ? 'r' : p == ROOK_B ? 'r' : p == QUEEN_W ? 'q' : p == QUEEN_B ? 'q' : p == KING_W ? 'k' : p == KING_B ? 'k' : 'u';
+}
+
 static inline unsigned char notationToPiece(char p) {
 	return p == ' ' ? BLANK : p == 'P' ? PAWN_W : p == 'p' ? PAWN_B : p == 'N' ? KNIGHT_W : p == 'n' ? KNIGHT_B : p == 'B' ? BISHOP_W : p == 'b' ? BISHOP_B : p == 'R' ? ROOK_W : p == 'r' ? ROOK_B : p == 'Q' ? QUEEN_W : p == 'q' ? QUEEN_B : p == 'K' ? KING_W : p == 'k' ? KING_B : UNKNOWN;
 }
@@ -408,7 +941,7 @@ static inline unsigned char notationToBlackPiece(char p) {
 	return p == ' ' ? BLANK : (p == 'P' || p == 'p') ? PAWN_B : (p == 'N' || p == 'n') ? KNIGHT_B : (p == 'B' || p == 'b') ? BISHOP_B : (p == 'R' || p == 'r') ? ROOK_B : (p == 'Q' || p == 'q') ? QUEEN_B : (p == 'K' || p == 'k') ? KING_B : UNKNOWN;
 }
 
-static inline void makeForcedMove(uint64_t *board, char *brkrwrkr00, char const *args) {
+void makeForcedMove(uint64_t *board, char *brkrwrkr00, char const *args) {
 	char toPiece = accessBoardAt(board, args[1]);
 	char fromPiece = accessBoardAt(board, args[0]);
 	setBoardAt(board, args[1], fromPiece);
@@ -518,7 +1051,7 @@ static inline char *indicesToUci(char const *indices) {
 	ret[1] = '8' - (indices[0] / 8);
 	ret[2] = (indices[1] % 8) + 'a';
 	ret[3] = '8' - (indices[1] / 8);
-	ret[4] = indices[2] ? pieceToNotation(indices[2]) : 0;
+	ret[4] = indices[2] ? pieceToLowerNotation(indices[2]) : 0;
 	ret[5] = 0;
 	return ret;
 }

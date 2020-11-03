@@ -48,14 +48,14 @@ unsigned int printArray(Array const *, unsigned int, unsigned int);
 unsigned int printJSON(JSON const *, unsigned int, unsigned int);
 unsigned int parseArray(char const *, Array **);
 unsigned int parseJSON(char const *, JSON **);
-static inline unsigned int parseString(char const *, char **);
-static inline int JSONIndexOf(char const *, JSON const *);
-static inline char *appendStringToString(char **, char const *);
-static inline char *appendToString(char **, char);
-static inline void freeJSON(JSON *);
-static inline JSONContent JSONGetValueForKey(char const *, JSON const *);
+unsigned int parseString(char const *, char **);
+int JSONIndexOf(char const *, JSON const *);
+char *appendStringToString(char **, char const *);
+char *appendToString(char **, char);
+void freeJSON(JSON *);
+JSONContent JSONGetValueForKey(char const *, JSON const *);
 
-static inline int JSONIndexOf(char const *str, JSON const *json) {
+int JSONIndexOf(char const *str, JSON const *json) {
 	unsigned int i;
 
 	for (i = 0; i < json->length; i++)
@@ -64,7 +64,7 @@ static inline int JSONIndexOf(char const *str, JSON const *json) {
 	return -1;
 }
 
-static inline JSONContent JSONGetValueForKey(char const *str, JSON const *json) {
+JSONContent JSONGetValueForKey(char const *str, JSON const *json) {
 	// No error checking implemented
 	return json->contents[JSONIndexOf(str, json)];
 }
@@ -158,7 +158,7 @@ unsigned int printJSON(JSON const *json, unsigned int indent, unsigned int depth
 	return 1;
 }
 
-static inline unsigned int parseString(char const *jsonStr, char **str) {
+unsigned int parseString(char const *jsonStr, char **str) {
 	int i = 0;
 	*str = NULL;
 	char escape = 0, lastEscape = 0;
@@ -322,7 +322,7 @@ unsigned int parseJSON(char const *jsonStr, JSON **json) {
 	return i;
 }
 
-static inline char *appendStringToString(char **str, const char *s) {
+char *appendStringToString(char **str, const char *s) {
 	unsigned int len2 = strlen(s);
 	if (!*str) {
 		 *str = malloc(1);
@@ -341,7 +341,7 @@ static inline char *appendStringToString(char **str, const char *s) {
 	return *str;
 }
 
-static inline char *appendToString(char **str, char c) {
+char *appendToString(char **str, char c) {
 	if (!*str) {
 		 *str = malloc(1);
 		**str = 0;
@@ -356,38 +356,40 @@ static inline char *appendToString(char **str, char c) {
 	return *str;
 }
 
-static inline void freeArray(Array *arr) {
+void freeArray(Array *arr) {
 	for (unsigned int i = 0; i < arr->length; i++)
 		switch (arr->contents[i].type) {
-			case STRING:
+			case STRING: {
 				free(arr->contents[i].str);
-			break;
-			case OBJECT:
+			} break;
+			case OBJECT: {
 				freeJSON(arr->contents[i].json);
-			break;
-			case ARRAY:
+			} break;
+			case ARRAY: {
 				freeArray(arr->contents[i].array);
-			break;
+			} break;
 		}
 
+	free(arr->contents);
 	free(arr);
 }
 
-static inline void freeJSON(JSON *json) {
+void freeJSON(JSON *json) {
 	for (unsigned int i = 0; i < json->length; i++) {
 		free(json->contents[i].name);
 		switch (json->contents[i].type) {
-			case STRING:
+			case STRING: {
 				free(json->contents[i].str);
-			break;
-			case OBJECT:
+			} break;
+			case OBJECT: {
 				freeJSON(json->contents[i].json);
-			break;
-			case ARRAY:
+			} break;
+			case ARRAY: {
 				freeArray(json->contents[i].array);
-			break;
+			} break;
 		}
 	}
 
+	free(json->contents);
 	free(json);
 }

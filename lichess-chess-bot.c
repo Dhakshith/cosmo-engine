@@ -1,3 +1,14 @@
+// heroku ps:scale service=1 -a lichess-chess-bot
+
+
+
+
+
+
+
+
+
+
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
@@ -14,11 +25,11 @@ static uint64_t *prevBoard;
 static char brkrwr00 = 0xfc;
 static char *myLichessId;
 
-static inline size_t emptycallback(char *t, size_t u, size_t v, void *w) {
+size_t emptycallback(char *t, size_t u, size_t v, void *w) {
 	return v;
 }
 
-static inline unsigned int spaces(char *str) {
+unsigned int spaces(char const *str) {
 	unsigned int i = 0;
 
 	while (*str != 0)
@@ -57,32 +68,54 @@ size_t playGame(char *gameState, size_t size, size_t nmemb, void *gameId) {
 		char gameFull = !strcmp(str, "gameFull");
 		char gameState = !strcmp(str, "gameState");
 		if (!gameFull && !gameState) {
+			printf("Maybe a chat message\n");
 			freeJSON(json);
 			return nmemb;
 		}
-		char *moves = gameFull ? JSONGetValueForKey("moves", JSONGetValueForKey("state", json).json).str : JSONGetValueForKey("moves", json).str;
-		
+		printf("Going on moves\n");
+		fflush(stdout);
+		char *movesTmp = gameFull ? JSONGetValueForKey("moves", JSONGetValueForKey("state", json).json).str : JSONGetValueForKey("moves", json).str;
+		if (!movesTmp)
+			movesTmp = " ";
+		printf("Moves: %s\n", movesTmp);
+		char *moves = strcpy(malloc(strlen(movesTmp) + 1), movesTmp);
+		fflush(stdout);
+
 		if (!setMyColor && gameFull) {
 			setMyColor = 1;
 			myColor = !strcmp(JSONGetValueForKey("id", JSONGetValueForKey("white", json).json).str, myLichessId);
 		}
 
-		if (!moves)
-			moves = " ";
-		else {
+		if (*moves != ' ') {
 			size_t strlenn = strlen(moves);
 			char beforaf = strlenn < 5 || moves[strlenn - 5] == ' ';
+			printf("Did: %s\n", (char [6]) {moves[strlenn - (5 - beforaf)], moves[strlenn - 4 + beforaf], moves[strlenn - 3 + beforaf], moves[strlenn - 2 + beforaf], moves[strlenn - (!beforaf)], 0});
+			fflush(stdout);
 			char *indicess = uciToIndices(board, (char [6]) {moves[strlenn - (5 - beforaf)], moves[strlenn - 4 + beforaf], moves[strlenn - 3 + beforaf], moves[strlenn - 2 + beforaf], moves[strlenn - (!beforaf)], 0});
 			memcpy(prevBoard, board, 32);
+			printf("Making the move on board... ");
+			fflush(stdout);
 			makeForcedMove(board, &brkrwr00, indicess);
+			printf("Made\n");
+			fflush(stdout);
 			free(indicess);
 		}
 
-		freeJSON(json);
+		printf("Freeing the json.. ");
+		fflush(stdout);
+		freeJSON(json);	
+		printf("Freed\n");
+		fflush(stdout);
 
+		printf("My color is %d, while spaces is %d\n", myColor, spaces(moves));
+		fflush(stdout);
 		if (spaces(moves) % 2 == !!myColor) {
+			printf("Calculating the best move...\n");
+			fflush(stdout);
 			char *q;
 			char *indicess = theBestMove(board, prevBoard, brkrwr00, myColor);
+			printf("Calculated the best move\n");
+			fflush(stdout);
 			
 			if (!indicess)
 				return nmemb;
@@ -91,6 +124,8 @@ size_t playGame(char *gameState, size_t size, size_t nmemb, void *gameId) {
 
 			char *bestmove = indicesToUci(indicess);
 			sprintf(q, "https://lichess.org/api/bot/game/%s/move/%s", (char *) gameId, bestmove);
+			printf("bestmove: %s\n", bestmove);
+			fflush(stdout);
 			free(bestmove);
 			free(indicess);
 
