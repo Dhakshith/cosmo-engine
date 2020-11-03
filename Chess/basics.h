@@ -10,22 +10,20 @@
 // A piece = 4 bits
 // black = 0, white = 1
 
-typedef enum piece {
-	BLANK,
-	PAWN_W,
-	KNIGHT_W,
-	BISHOP_W,
-	ROOK_W,
-	QUEEN_W,
-	KING_W,
-	PAWN_B,
-	KNIGHT_B,
-	BISHOP_B,
-	ROOK_B,
-	QUEEN_B,
-	KING_B,
-	UNKNOWN
-} piece;
+#define BLANK    0b0000
+#define PAWN_B   0b0010
+#define KNIGHT_B 0b0100
+#define BISHOP_B 0b0110
+#define ROOK_B   0b1000
+#define QUEEN_B  0b1010
+#define KING_B   0b1100
+#define PAWN_W   0b0011
+#define KNIGHT_W 0b0101
+#define BISHOP_W 0b0111
+#define ROOK_W   0b1001
+#define QUEEN_W  0b1011
+#define KING_W   0b1101
+#define UNKNOWN  0b1110
 
 uint64_t *newChessBoard();
 static inline unsigned char accessBoardAt(uint64_t const *, unsigned char);
@@ -66,11 +64,11 @@ static inline unsigned char accessBoardAt(uint64_t const *board, unsigned char i
 }
 
 static inline char isBlack(unsigned char p) {
-	return p >= PAWN_B && p <= KING_B;
+	return p && !(p & 1);
 }
 
 static inline char isWhite(unsigned char p) {
-	return p >= PAWN_W && p <= KING_W;
+	return p & 1;
 }
 
 char validateMove(uint64_t const *board, uint64_t const *prevBoard, char brkrwrkr00, char const *move) {
