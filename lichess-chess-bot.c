@@ -5,6 +5,7 @@
 #include "JSON Parser/JSON.h"
 #include "Chess/basics.h"
 
+#define DEPTH 2
 #define AUTHORIZATION "Authorization: Bearer KOdnd7Ny0eMQWWyx"
 
 static char myColor = 0; // white = 0, black = 1
@@ -49,26 +50,23 @@ size_t playGame(char *gameState, size_t size, size_t nmemb, void *gameId) {
 		str[ndone] = 0;
 		JSON *json = NULL;
 		parseJSON(str, &json);
-		printJSON(json, 4, 0);
+		// printJSON(json, 4, 0);
 		free(str);
-		printf("\n");
-		fflush(stdout);
+		// printf("\n");
+		// fflush(stdout);
 		str = JSONGetValueForKey("type", json).str;
 		char gameFull = !strcmp(str, "gameFull");
 		char gameState = !strcmp(str, "gameState");
 		if (!gameFull && !gameState) {
-			printf("Maybe a chat message\n");
 			freeJSON(json);
 			return nmemb;
 		}
-		printf("Going on moves\n");
-		fflush(stdout);
 		char *movesTmp = gameFull ? JSONGetValueForKey("moves", JSONGetValueForKey("state", json).json).str : JSONGetValueForKey("moves", json).str;
 		if (!movesTmp)
 			movesTmp = " ";
-		printf("Moves: %s\n", movesTmp);
+		// printf("Moves: %s\n", movesTmp);
 		char *moves = strcpy(malloc(strlen(movesTmp) + 1), movesTmp);
-		fflush(stdout);
+		// fflush(stdout);
 
 		if (!setMyColor && gameFull) {
 			setMyColor = 1;
@@ -78,34 +76,18 @@ size_t playGame(char *gameState, size_t size, size_t nmemb, void *gameId) {
 		if (*moves != ' ') {
 			size_t strlenn = strlen(moves);
 			char beforaf = strlenn < 5 || moves[strlenn - 5] == ' ';
-			printf("Did: %s\n", (char [6]) {moves[strlenn - (5 - beforaf)], moves[strlenn - 4 + beforaf], moves[strlenn - 3 + beforaf], moves[strlenn - 2 + beforaf], moves[strlenn - (!beforaf)], 0});
-			fflush(stdout);
 			char *indicess = uciToIndices(board, (char [6]) {moves[strlenn - (5 - beforaf)], moves[strlenn - 4 + beforaf], moves[strlenn - 3 + beforaf], moves[strlenn - 2 + beforaf], moves[strlenn - (!beforaf)], 0});
 			memcpy(prevBoard, board, 32);
-			printf("Making the move on board... ");
-			fflush(stdout);
 			makeForcedMove(board, &brkrwr00, indicess);
-			printf("Made\n");
-			fflush(stdout);
 			free(indicess);
 		}
 
-		printf("Freeing the json.. ");
-		fflush(stdout);
-		freeJSON(json);	
-		printf("Freed\n");
-		fflush(stdout);
+		freeJSON(json);
 
-		printf("My color is %d, while spaces is %d\n", myColor, spaces(moves));
-		fflush(stdout);
 		if (spaces(moves) % 2 == !!myColor) {
-			printf("Calculating the best move...\n");
-			fflush(stdout);
 			char *q;
-			char *indicess = theBestMove(board, prevBoard, brkrwr00, myColor);
-			printf("Calculated the best move\n");
-			fflush(stdout);
-			
+			char *indicess = theBestMove(board, prevBoard, brkrwr00, myColor, DEPTH);
+
 			if (!indicess)
 				return nmemb;
 			
@@ -113,7 +95,7 @@ size_t playGame(char *gameState, size_t size, size_t nmemb, void *gameId) {
 
 			char *bestmove = indicesToUci(indicess);
 			sprintf(q, "https://lichess.org/api/bot/game/%s/move/%s", (char *) gameId, bestmove);
-			printf("bestmove: %s\n", bestmove);
+			printf("Bestmove: %s\n", bestmove);
 			fflush(stdout);
 			free(bestmove);
 			free(indicess);
@@ -145,6 +127,8 @@ size_t playGame(char *gameState, size_t size, size_t nmemb, void *gameId) {
 			curl_easy_cleanup(curl);
 			curl_slist_free_all(chunk);
 		}
+
+		free(moves);
 	}
 
 	return nmemb;
@@ -159,9 +143,9 @@ size_t callback(char *actualStr, size_t size, size_t nmemb, void *usrdata) {
 		str[ndone] = 0;
 		JSON *json = NULL;
 		parseJSON(str, &json);
-		printJSON(json, 4, 0);
-		printf("\n");
-		fflush(stdout);
+		// printJSON(json, 4, 0);
+		// printf("\n");
+		// fflush(stdout);
 		free(str);
 		int ind = JSONIndexOf("type", json);
 		if (ind == -1) {
@@ -193,7 +177,6 @@ size_t callback(char *actualStr, size_t size, size_t nmemb, void *usrdata) {
 
 					setMyColor = 0;
 					free(board);
-					board = newChessBoard();
 					char *gameId = JSONGetValueForKey("id", JSONGetValueForKey("challenge", json).json).str;
 					char *s = malloc(42 + strlen(gameId));
 					sprintf(s, "https://lichess.org/api/challenge/%s/accept", gameId);
@@ -207,6 +190,8 @@ size_t callback(char *actualStr, size_t size, size_t nmemb, void *usrdata) {
 
 					curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, playGame);
 					curl_easy_setopt(curl, CURLOPT_WRITEDATA, strcpy(malloc(strlen(gameId) + 1), gameId));
+
+					board = newChessBoard();
 
 					char *s = malloc(41 + strlen(gameId));
 					sprintf(s, "https://lichess.org/api/bot/game/stream/%s", gameId);
@@ -276,16 +261,20 @@ int main(void) {
 
 	res = curl_easy_perform(curl);
 
-	if(res != CURLE_OK)
+	if(res != CURLE_OK) {
 		fprintf(stderr, "curl_easy_perform() failed (in main): %s\n", curl_easy_strerror(res));
+		exit(-1);
+	}
 
 	curl_easy_setopt(curl, CURLOPT_URL, "https://lichess.org/api/stream/event");
 	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, callback);
 
 	res = curl_easy_perform(curl);
 
-	if(res != CURLE_OK)
+	if(res != CURLE_OK) {
 		fprintf(stderr, "curl_easy_perform() failed (in main 2nd part): %s\n", curl_easy_strerror(res));
+		exit(-1);
+	}
 
 	curl_easy_cleanup(curl);
 	curl_slist_free_all(chunk);

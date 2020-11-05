@@ -108,6 +108,7 @@ unsigned int printArray(Array const *arr, unsigned int indent, unsigned int dept
 	unsigned int j;
 	for (j = 0; j < indent * depth; j++)
 		printf(" ");
+	
 	printf("]");
 
 	return 1;
