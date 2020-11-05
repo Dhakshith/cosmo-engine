@@ -6,6 +6,11 @@
 #include <stdint.h>
 #include <limits.h>
 
+#include <sys/stat.h>
+#include <sys/types.h>
+
+// static unsigned int _movecounter_ = 0;
+
 // A piece = 4 bits
 // black = 0, white = 1
 
@@ -34,8 +39,8 @@ struct node {
 	char isnotleafnode;
 };
 
-struct nodeandweight {
-	struct node n;
+struct stringandweight {
+	char *move;
 	int weight;
 };
 
@@ -55,6 +60,7 @@ static inline unsigned char notationToWhitePiece(char);
 static inline unsigned char notationToBlackPiece(char);
 void freeNodes(struct node);
 void printBoard(uint64_t const *);
+void printBoardToFile(FILE *, uint64_t const *);
 void printValidMoves(uint64_t const *, uint64_t const *, char, char);
 unsigned long validMoves(uint64_t const *, uint64_t const *, char, char, char **);
 unsigned long generateNodes(uint64_t const *, uint64_t const *, char, char, struct node **, int);
@@ -65,7 +71,7 @@ static inline unsigned char chessPosToIndex(char const *);
 char isCheckOnKing(uint64_t const *, char /*king color: 0 - black, 1 - white*/);
 char isCheckOnXY(uint64_t const *, char, char, char);
 int evaluateNode(struct node);
-struct nodeandweight minimax(struct node, int, char);
+struct stringandweight minimax(struct node, int, char);
 
 static inline char absol(char x) {
 	return x * -(x < 0);
@@ -87,6 +93,14 @@ void printBoard(uint64_t const *board) {
 	}
 	fflush(stdout);
 }
+
+// void printBoardToFile(FILE *fp, uint64_t const *board) {
+// 	unsigned char i;
+// 	for (i = 0; i < 64; i++) {
+// 		fprintf(fp, "%c", pieceToNotation(accessBoardAt(board, i)));
+// 		if ((i + 1) % 8 == 0) fprintf(fp, "\n");
+// 	}
+// }
 
 static inline unsigned char accessBoardAt(uint64_t const *board, unsigned char ind) {
 	if (ind >= 64)
@@ -803,6 +817,31 @@ unsigned long validMoves(uint64_t const *boardcpy, uint64_t const *prevBoard, ch
 	return _len;
 }
 
+// char *ntostr(unsigned int n) {
+// 	char *ret = NULL;
+// 	unsigned int len = 0;
+
+// 	if (!n)
+// 		return memcpy(malloc(2), "0", 2);
+
+// 	while (n) {
+// 		ret = realloc(ret, ++len);
+// 		ret[len - 1] = (n % 10) + '0';
+// 		n /= 10;
+// 	}
+
+// 	for (unsigned int i = 0; i < len / 2; i++) {
+// 		char tmp = ret[i];
+// 		ret[i] = ret[len - i - 1];
+// 		ret[len - i - 1] = tmp;
+// 	}
+
+// 	ret = realloc(ret, ++len);
+// 	ret[len - 1] = '\0';
+
+// 	return ret;
+// }
+
 unsigned long generateNodes(uint64_t const *board, uint64_t const *prevBoard, char brkrwrkr00, char isWhiteYourColor, struct node **ret, int depth) {
 	if (!depth)
 		return 0;
@@ -815,6 +854,11 @@ unsigned long generateNodes(uint64_t const *board, uint64_t const *prevBoard, ch
 
 	*ret = malloc(_len_ / 3 * sizeof **ret);
 
+	// char *drname = NULL;
+	
+	// if (depth > 1)
+	// 	drname = ntostr(_movecounter_);
+
 	for (unsigned long i = 0, j = 0; i < _len_; i += 3, j++) {
 		(*ret)[j].color = isWhiteYourColor;
 		(*ret)[j].pos = memcpy(malloc(32), board, 32);
@@ -823,8 +867,22 @@ unsigned long generateNodes(uint64_t const *board, uint64_t const *prevBoard, ch
 		makeForcedMove((*ret)[j].pos, &((*ret)[j].brkrwrkr00), (*ret)[j].move);
 		(*ret)[j].len = generateNodes((*ret)[j].pos, board, (*ret)[j].brkrwrkr00, !isWhiteYourColor, &((*ret)[j].branches), depth - 1);
 		(*ret)[j].isnotleafnode = depth != 1;
+		// if (depth > 1) {
+			// remove(drname);
+		// 	mkdir(drname, 0777);
+		// 	char *fname = ntostr(j);
+		// 	char *newstr = malloc(2 + strlen(drname) + strlen(fname));
+		// 	sprintf(newstr, "%s/%s", drname, fname);
+		// 	FILE *fileopened = fopen(newstr, "w");
+		// 	fprintf(fileopened, "%d\n", evaluateNode((*ret)[j]));
+		// 	printBoardToFile(fileopened, (*ret)[j].pos);
+		// 	fclose(fileopened);
+		// 	free(newstr);
+		// 	free(fname);
+		// }
 	}
 
+	// free(drname);
 	free(valids);
 
 	return _len_ / 3;
@@ -838,25 +896,26 @@ void freeNodes(struct node n) {
 		freeNodes(n.branches[i]);
 }
 
-struct nodeandweight minimax(struct node n, int depth, char maximizer) {
+struct stringandweight minimax(struct node n, int depth, char maximizer) {
 	if (!depth || !n.len)
-		return (struct nodeandweight) {n, evaluateNode(n)};
+		return (struct stringandweight) {n.move, evaluateNode(n)};
 
-	struct node optimalnode;
-	struct nodeandweight curr;
+	char *optimalmove;
+	struct stringandweight curr;
 	int eval = maximizer ? INT_MIN : INT_MAX;
 	for (unsigned long i = 0; i < n.len; i++) {
 		curr = minimax(n.branches[i], depth - 1, !maximizer);
 		if (maximizer ? (curr.weight > eval) : (curr.weight < eval)) {
 			eval = curr.weight;
-			optimalnode = n.branches[i];
+			optimalmove = n.branches[i].move;
 		}
 	}
 
-	return (struct nodeandweight) {optimalnode, eval};
+	return (struct stringandweight) {optimalmove, eval};
 }
 
 char *theBestMove(uint64_t const *board, uint64_t const *prevBoard, char brkrwrkr00, char isWhiteYourColor, int depth) {
+	// _movecounter_++;
 	if (!depth)
 		return NULL;
 
@@ -874,7 +933,7 @@ char *theBestMove(uint64_t const *board, uint64_t const *prevBoard, char brkrwrk
 	baseNode.color = isWhiteYourColor;
 	baseNode.isnotleafnode = depth != 1;
 
-	char *bestmove = memcpy(malloc(3), minimax(baseNode, depth, isWhiteYourColor).n.move, 3);
+	char *bestmove = memcpy(malloc(3), minimax(baseNode, depth, isWhiteYourColor).move, 3);
 
 	freeNodes(baseNode);
 
@@ -1033,9 +1092,7 @@ void makeForcedMove(uint64_t *board, char *brkrwrkr00, char const *args) {
 	setBoardAt(board, args[0], BLANK);
 
 	char x1 = args[0] % 8;
-	char y1 = args[0] / 8;
 	char x2 = args[1] % 8;
-	char y2 = args[1] / 8;
 	char isWhiteFrom = isWhite(fromPiece);
 	char castled = 0;
 
@@ -1048,7 +1105,7 @@ void makeForcedMove(uint64_t *board, char *brkrwrkr00, char const *args) {
 		setBoardAt(board, args[1], args[2]);
 
 	// Castle
-	else if ((fromPiece == KING_W || fromPiece == KING_B) && absol(x2 - x1) == 2 && y1 == y2 && y1 == (isWhiteFrom * 7)) {
+	else if ((fromPiece == KING_W || fromPiece == KING_B) && absol(args[1] - args[0]) == 2) {
 		setBoardAt(board, (args[1] + args[0]) / 2, isWhiteFrom ? ROOK_W : ROOK_B);
 		setBoardAt(board, isWhiteFrom ? (x2 > x1 ? 63 : 56) : (x2 > x1 ? 7 : 0), BLANK);
 		castled = 1;
@@ -1081,7 +1138,7 @@ static inline char makeMove(uint64_t *board, uint64_t const *prevBoard, char *br
 	}
 
 	makeForcedMove(board, brkrwrkr00, args);
-	
+
 	return 1;
 }
 
@@ -1147,17 +1204,16 @@ static inline char *indicesToUci(char const *indices) {
 int evaluateNode(struct node n) {
 	if (!n.len && n.isnotleafnode) {
 		if (isCheckOnKing(n.pos, !n.color))
-			return (n.color - !n.color) * 64000;
-		else if (isCheckOnKing(n.pos, n.color))
 			return (n.color - !n.color) * -64000;
+		else if (isCheckOnKing(n.pos, n.color))
+			return (n.color - !n.color) * 64000;
 	}
 
 	int posAdv = 0;
 
 	for (char i = 0, p; i < 64; i++) {
 		p = accessBoardAt(n.pos, i);
-		char iw = isWhite(p);
-		posAdv -= (p == (PAWN_B & iw) ? 10 : p == (KNIGHT_B & iw) ? 29 : p == (BISHOP_B & iw) ? 30 : p == (ROOK_B & iw) ? 50 : p == (QUEEN_B & iw) ? 100 : 0) * -iw;
+		posAdv += p == PAWN_B ? -10 : p == PAWN_W ? 10 : p == KNIGHT_B ? -29 : p == KNIGHT_W ? 29 : p == BISHOP_B ? -30 : p == BISHOP_W ? 30 : p == ROOK_B ? -50 : p == ROOK_W ? 50 : p == QUEEN_B ? -100 : p == QUEEN_W ? 100 : 0;
 	}
 
 	// +1 for castle

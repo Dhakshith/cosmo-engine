@@ -5,7 +5,7 @@
 #include "JSON Parser/JSON.h"
 #include "Chess/basics.h"
 
-#define DEPTH 2
+#define DEPTH 4
 #define AUTHORIZATION "Authorization: Bearer KOdnd7Ny0eMQWWyx"
 
 static char myColor = 0; // white = 0, black = 1
@@ -95,6 +95,7 @@ size_t playGame(char *gameState, size_t size, size_t nmemb, void *gameId) {
 
 			char *bestmove = indicesToUci(indicess);
 			sprintf(q, "https://lichess.org/api/bot/game/%s/move/%s", (char *) gameId, bestmove);
+			printBoard(board);
 			printf("Bestmove: %s\n", bestmove);
 			fflush(stdout);
 			free(bestmove);
