@@ -42,8 +42,6 @@ struct nodeandweight {
 static inline char absol(char);
 static inline char isWhite(char);
 static inline char isBlack(char);
-static inline int min(int, int);
-static inline int max(int, int);
 static inline unsigned char accessBoardAt(uint64_t const *, unsigned char);
 static inline void setBoardAt(uint64_t *, unsigned char, unsigned char);
 static inline char makeMove(uint64_t *, uint64_t const *, char *, char *); // char * (3nd arg) -> {from, to, promotionPiece or 0}
@@ -824,7 +822,7 @@ unsigned long generateNodes(uint64_t const *board, uint64_t const *prevBoard, ch
 		(*ret)[j].move = memcpy(malloc(3), valids + i, 3);
 		makeForcedMove((*ret)[j].pos, &((*ret)[j].brkrwrkr00), (*ret)[j].move);
 		(*ret)[j].len = generateNodes((*ret)[j].pos, board, (*ret)[j].brkrwrkr00, !isWhiteYourColor, &((*ret)[j].branches), depth - 1);
-		(*ret)[j].isnotleafnode = 1;
+		(*ret)[j].isnotleafnode = depth != 1;
 	}
 
 	free(valids);
@@ -838,14 +836,6 @@ void freeNodes(struct node n) {
 
 	for (unsigned long i = 0; i < n.len; i++)
 		freeNodes(n.branches[i]);
-}
-
-static inline int min(int a, int b) {
-	return a <= b ? a : b;
-}
-
-static inline int max(int a, int b) {
-	return a >= b ? a : b;
 }
 
 struct nodeandweight minimax(struct node n, int depth, char maximizer) {
@@ -882,7 +872,7 @@ char *theBestMove(uint64_t const *board, uint64_t const *prevBoard, char brkrwrk
 	baseNode.brkrwrkr00 = brkrwrkr00;
 	baseNode.move = NULL;
 	baseNode.color = isWhiteYourColor;
-	baseNode.isnotleafnode = 1;
+	baseNode.isnotleafnode = depth != 1;
 
 	char *bestmove = memcpy(malloc(3), minimax(baseNode, depth, isWhiteYourColor).n.move, 3);
 
@@ -1155,8 +1145,12 @@ static inline char *indicesToUci(char const *indices) {
 }
 
 int evaluateNode(struct node n) {
-	if (!n.len && n.isnotleafnode && isCheckOnKing(n.pos, !n.color))
-		return (n.color - !n.color) * 64000;
+	if (!n.len && n.isnotleafnode) {
+		if (isCheckOnKing(n.pos, !n.color))
+			return (n.color - !n.color) * 64000;
+		else if (isCheckOnKing(n.pos, n.color))
+			return (n.color - !n.color) * -64000;
+	}
 
 	int posAdv = 0;
 
