@@ -29,7 +29,7 @@
 void myprint(char const *);
 
 int main(int argc, char **argv) {
-	long SERVER_PORT = atol("PORT");
+	unsigned int SERVER_PORT = atoi("PORT");
 	printf("%d\n", SERVER_PORT);
 
 	int listenfd, connfd, n;
