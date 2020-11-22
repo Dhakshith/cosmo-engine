@@ -29,8 +29,8 @@
 void myprint(char const *);
 
 int main(int argc, char **argv) {
-	unsigned int SERVER_PORT = atoi("PORT");
-	printf("%d\n", SERVER_PORT);
+	unsigned int SERVER_PORT = atoi(getenv("PORT"));
+	printf("p: %d, actually: %s\n", SERVER_PORT, getenv("PORT"));
 
 	int listenfd, connfd, n;
 	struct sockaddr_in servaddr;
