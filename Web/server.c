@@ -30,6 +30,7 @@
 void myprint(char const *);
 
 int main(int argc, char **argv) {
+	long SERVER_PORT = atol("PORT");
 	int listenfd, connfd, n;
 	struct sockaddr_in servaddr;
 	uint8_t sendline[MAXLINE + 1], recvline[MAXLINE + 1];
