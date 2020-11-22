@@ -27,9 +27,10 @@
 }
 
 void myprint(char const *);
+unsigned int Atoui(char const *);
 
 int main(int argc, char **argv) {
-	unsigned int SERVER_PORT = atoi(getenv("PORT"));
+	unsigned int SERVER_PORT = Atoui(getenv("PORT"));
 	int listenfd, connfd, n;
 	struct sockaddr_in servaddr;
 	uint8_t sendline[MAXLINE + 1], recvline[MAXLINE + 1];
@@ -102,4 +103,15 @@ void myprint(char const *str) {
 	}
 
 	printf("\n");
+}
+
+unsigned int Atoui(char const *str) {
+	unsigned int retval = 0;
+
+	while (*str) {
+		retval = retval * 10 + *str - '0'
+		str++;
+	}
+
+	return retval;
 }
