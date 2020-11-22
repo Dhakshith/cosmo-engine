@@ -109,7 +109,7 @@ unsigned int Atoui(char const *str) {
 	unsigned int retval = 0;
 
 	while (*str) {
-		retval = retval * 10 + *str - '0'
+		retval = retval * 10 + *str - '0';
 		str++;
 	}
 
